@@ -23,8 +23,10 @@ import numpy as np
 app = Flask(__name__)
 
 # PRE-PROCESSING
+# Number of sample points
+num_sample_points = 100
 # Calculate 100 evenly spaced numbers between 0 and 1
-evenly_spaced_100_numbers = np.linspace(0, 1, 100)
+evenly_spaced_100_numbers = np.linspace(0, 1, num_sample_points)
 
 # Centroids of 26 keys
 centroids_X = [50, 205, 135, 120, 100, 155, 190, 225, 275, 260, 295, 330, 275, 240, 310, 345, 30, 135, 85, 170, 240, 170, 65, 100, 205, 65]
@@ -63,8 +65,6 @@ def generate_sample_points(points_X, points_Y):
     '''
     sample_points_X, sample_points_Y = [], []
     # TODO: Start sampling (12 points)
-
-    global evenly_spaced_100_numbers
 
     # Calculate the euclidean distance between consecutive points
     distance = np.sqrt(np.ediff1d(points_X, to_begin=0) ** 2 + np.ediff1d(points_Y, to_begin=0) ** 2)
@@ -115,7 +115,6 @@ def do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, tem
             is a 1D list and has the length of 100.
     '''
     valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = [], [], []
-    global words
     # TODO: Set your own pruning threshold
     threshold = 35
     # TODO: Do pruning (12 points)
@@ -180,6 +179,10 @@ def get_shape_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_tem
     L = 1
 
     # TODO: Calculate shape scores (12 points)
+
+    shape_scores = np.sum(((valid_template_sample_points_X - np.reshape(gesture_sample_points_X, (1, -1))) ** 2 + (
+                valid_template_sample_points_Y - np.reshape(gesture_sample_points_Y, (1, -1))) ** 2) ** 0.5, axis=1,
+           keepdims=True) / num_sample_points
 
     return shape_scores
 

@@ -16,6 +16,7 @@ import time
 import json
 
 # IMPORTS
+from sklearn.metrics.pairwise import euclidean_distances
 from scipy.interpolate import interp1d
 import numpy as np
 
@@ -114,9 +115,44 @@ def do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, tem
             is a 1D list and has the length of 100.
     '''
     valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = [], [], []
+    global words
     # TODO: Set your own pruning threshold
-    threshold = 20
+    threshold = 35
     # TODO: Do pruning (12 points)
+
+    # Create numpy array for gesture start and end point [[x, y]]
+    gesture_start_point = np.array([gesture_points_X[0], gesture_points_Y[0]])
+    gesture_end_point = np.array([gesture_points_X[-1], gesture_points_Y[-1]])
+
+    # for i in range(len(template_sample_points_X)):
+    #     template_start_point = np.array([template_sample_points_X[i][0], template_sample_points_Y[i][0]])
+    #     start_distance = np.linalg.norm(template_start_point - gesture_start_point)
+    #
+    #     template_end_point = np.array([template_sample_points_X[i][-1], template_sample_points_Y[i][-1]])
+    #     end_distance = np.linalg.norm(template_end_point - gesture_end_point)
+    #
+    #     if start_distance + end_distance < threshold:
+    #         valid_template_sample_points_X.append(template_sample_points_X[i])
+    #         valid_template_sample_points_Y.append(template_sample_points_Y[i])
+    #         valid_words.append(words[i])
+
+    # Number of templates
+    num_templates = len(template_sample_points_X)
+    # Gather the start points and end points of templates in a numpy matrix [[x1, y1], [x2, y2], ..., [xn, yn]]
+    template_start_points = np.array([[template_sample_points_X[i][0], template_sample_points_Y[i][0]] for i in range(num_templates)])
+    template_end_points = np.array([[template_sample_points_X[i][-1], template_sample_points_Y[i][-1]] for i in range(num_templates)])
+
+    # Calculate distances between start points of gesture and templates and end points of gesture and templates
+    start_distances = euclidean_distances(np.reshape(gesture_start_point, (1, -1)), template_start_points)[0]
+    end_distances = euclidean_distances(np.reshape(gesture_end_point, (1, -1)), template_end_points)[0]
+
+    # Get indices whose start + end distances are less than the threshold
+    valid_indices = np.where((start_distances + end_distances) < threshold)[0]
+
+    # Gather valid template sample points and valid words using the valid indices
+    valid_template_sample_points_X = np.array(template_sample_points_X)[valid_indices]
+    valid_template_sample_points_Y = np.array(template_sample_points_Y)[valid_indices]
+    valid_words = [words[valid_index] for valid_index in valid_indices]
 
     return valid_words, valid_template_sample_points_X, valid_template_sample_points_Y
 
@@ -240,4 +276,31 @@ def shark2():
 
 
 if __name__ == "__main__":
-    app.run()
+    # app.run()
+    gesture_points_X = [169, 169, 170, 171, 173, 176, 180, 185, 187, 190, 192, 193, 194, 197, 201, 204, 206, 208, 210, 211, 213,
+                216, 217, 218, 219, 220, 219, 219, 218, 215, 213, 211, 205, 201, 196, 194, 191, 189, 188, 185, 181, 180,
+                177, 176, 175, 173, 171, 170, 166, 164, 161, 158, 154, 150, 143, 138, 137, 136, 134, 133, 131, 126, 124,
+                119, 117, 115, 113, 111, 110, 109, 106, 106]
+    gesture_points_Y = [47.1875, 46.1875, 46.1875, 46.1875, 49.1875, 51.1875, 53.1875, 57.1875, 60.1875, 62.1875, 64.1875,
+                65.1875, 66.1875, 69.1875, 72.1875, 75.1875, 77.1875, 79.1875, 81.1875, 82.1875, 82.1875, 85.1875,
+                86.1875, 87.1875, 87.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 86.1875,
+                85.1875, 83.1875, 82.1875, 81.1875, 81.1875, 81.1875, 80.1875, 78.1875, 78.1875, 77.1875, 77.1875,
+                76.1875, 76.1875, 75.1875, 75.1875, 73.1875, 72.1875, 71.1875, 70.1875, 69.1875, 67.1875, 65.1875,
+                63.1875, 63.1875, 63.1875, 63.1875, 62.1875, 62.1875, 61.1875, 61.1875, 59.1875, 57.1875, 57.1875,
+                56.1875, 56.1875, 55.1875, 55.1875, 55.1875, 55.1875]
+
+    gesture_sample_points_X, gesture_sample_points_Y = generate_sample_points(gesture_points_X, gesture_points_Y)
+
+    valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, template_sample_points_Y)
+
+    shape_scores = get_shape_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+
+    location_scores = get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+
+    integration_scores = get_integration_scores(shape_scores, location_scores)
+
+    best_word = get_best_word(valid_words, integration_scores)
+
+    end_time = time.time()
+
+    print('{"best_word":"' + best_word + '", "elapsed_time":"' + str(round((end_time - start_time) * 1000, 5)) + 'ms"}')

@@ -26,7 +26,7 @@ $(document).ready(function () {
 //
 //  sandbox testing specific functions
 //
-SHARK2.sandboxTest = function () {}
+SHARK2.sandboxTest = function () {};
 
 //
 //  handling mousedown on the main canvas
@@ -73,9 +73,9 @@ SHARK2.canvasMouseUp = function (e) {
     SHARK2.coords.push({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top
-    })
+    });
 
-    console.log(SHARK2.coords)
+    console.log(SHARK2.coords);
 
     $.ajax({
 	  type: 'POST',

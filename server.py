@@ -15,8 +15,15 @@ from flask import render_template
 import time
 import json
 
+# IMPORTS
+from scipy.interpolate import interp1d
+import numpy as np
 
 app = Flask(__name__)
+
+# PRE-PROCESSING
+# Calculate 100 evenly spaced numbers between 0 and 1
+evenly_spaced_100_numbers = np.linspace(0, 1, 100)
 
 # Centroids of 26 keys
 centroids_X = [50, 205, 135, 120, 100, 155, 190, 225, 275, 260, 295, 330, 275, 240, 310, 345, 30, 135, 85, 170, 240, 170, 65, 100, 205, 65]
@@ -56,6 +63,22 @@ def generate_sample_points(points_X, points_Y):
     sample_points_X, sample_points_Y = [], []
     # TODO: Start sampling (12 points)
 
+    global evenly_spaced_100_numbers
+
+    # Calculate the euclidean distance between consecutive points
+    distance = np.sqrt(np.ediff1d(points_X, to_begin=0) ** 2 + np.ediff1d(points_Y, to_begin=0) ** 2)
+    # Calculate the cumulative distance
+    cumulative_distance = np.cumsum(distance)
+    # Normalize the cumulative distance between 0 and 1
+    total_distance = cumulative_distance[-1]
+    cumulative_distance_norm = cumulative_distance / total_distance
+
+    # Interpolate numbers into 1-D space for both X and Y
+    interp1d_X = interp1d(cumulative_distance_norm, points_X, kind='linear')
+    interp1d_Y = interp1d(cumulative_distance_norm, points_Y, kind='linear')
+
+    # Create the sample points for X and Y
+    sample_points_X, sample_points_Y = interp1d_X(evenly_spaced_100_numbers), interp1d_Y(evenly_spaced_100_numbers)
     return sample_points_X, sample_points_Y
 
 
@@ -196,8 +219,8 @@ def shark2():
     for i in range(len(data)):
         gesture_points_X.append(data[i]['x'])
         gesture_points_Y.append(data[i]['y'])
-    gesture_points_X = [gesture_points_X]
-    gesture_points_Y = [gesture_points_Y]
+    # gesture_points_X = [gesture_points_X]
+    # gesture_points_Y = [gesture_points_Y]
 
     gesture_sample_points_X, gesture_sample_points_Y = generate_sample_points(gesture_points_X, gesture_points_Y)
 

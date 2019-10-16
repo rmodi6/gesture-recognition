@@ -205,9 +205,26 @@ def get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_
     :return:
         A list of location scores.
     '''
-    location_scores = []
+    location_scores = np.zeros((len(valid_template_sample_points_X),))
     radius = 15
     # TODO: Calculate location scores (12 points)
+
+    gesture_points = [[gesture_sample_points_X[j], gesture_sample_points_Y[j]] for j in range(num_sample_points)]
+
+    for i in range(len(valid_template_sample_points_X)):
+        # template_X, template_Y = valid_template_sample_points_X[i], valid_template_sample_points_Y[i]
+        template_points = [[valid_template_sample_points_X[j], valid_template_sample_points_Y[j]] for j in range(num_sample_points)]
+        is_gesture_within_tunnel = True
+        for j in range(num_sample_points):
+            min_distance = np.min(euclidean_distances(gesture_points[j], template_points)[0])
+            if max(min_distance - radius, 0) != 0:
+                is_gesture_within_tunnel = False
+                break
+            # min_distance = np.min(euclidean_distances(template_points[j], gesture_points)[0])
+            # template_gesture_tunnel_distance += max(min_distance - radius, 0)
+        if not is_gesture_within_tunnel:
+            deltas = None
+            location_scores[i] = np.sum(np.multiply(alphas, deltas))
 
     return location_scores
 
@@ -238,8 +255,10 @@ def get_best_word(valid_words, integration_scores):
     # TODO: Set your own range.
     n = 3
     # TODO: Get the best word (12 points)
-
-    return best_word
+    min_score = np.min(np.array(integration_scores))
+    min_score_indices = np.where(integration_scores == min_score)[0]
+    best_words = [valid_words[min_score_index] for min_score_index in min_score_indices]
+    return ' '.join(best_words)
 
 
 @app.route("/")

@@ -27,6 +27,12 @@ app = Flask(__name__)
 num_sample_points = 100
 # Calculate 100 evenly spaced numbers between 0 and 1
 evenly_spaced_100_numbers = np.linspace(0, 1, num_sample_points)
+# Calculate alphas for location score
+alphas = np.zeros((num_sample_points))
+mid_point = num_sample_points // 2
+for i in range(mid_point):
+    x = i/2450
+    alphas[mid_point - i - 1], alphas[mid_point + i] = x, x
 
 # Centroids of 26 keys
 centroids_X = [50, 205, 135, 120, 100, 155, 190, 225, 275, 260, 295, 330, 275, 240, 310, 345, 30, 135, 85, 170, 240, 170, 65, 100, 205, 65]
@@ -181,8 +187,8 @@ def get_shape_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_tem
     # TODO: Calculate shape scores (12 points)
 
     shape_scores = np.sum(((valid_template_sample_points_X - np.reshape(gesture_sample_points_X, (1, -1))) ** 2 + (
-                valid_template_sample_points_Y - np.reshape(gesture_sample_points_Y, (1, -1))) ** 2) ** 0.5, axis=1,
-           keepdims=True) / num_sample_points
+            valid_template_sample_points_Y - np.reshape(gesture_sample_points_Y, (1, -1))) ** 2) ** 0.5,
+                          axis=1) / num_sample_points
 
     return shape_scores
 
@@ -205,25 +211,20 @@ def get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_
     :return:
         A list of location scores.
     '''
-    location_scores = np.zeros((len(valid_template_sample_points_X),))
+    location_scores = []
     radius = 15
     # TODO: Calculate location scores (12 points)
 
+    location_scores = np.zeros((len(valid_template_sample_points_X)))
     gesture_points = [[gesture_sample_points_X[j], gesture_sample_points_Y[j]] for j in range(num_sample_points)]
 
     for i in range(len(valid_template_sample_points_X)):
-        # template_X, template_Y = valid_template_sample_points_X[i], valid_template_sample_points_Y[i]
-        template_points = [[valid_template_sample_points_X[j], valid_template_sample_points_Y[j]] for j in range(num_sample_points)]
-        is_gesture_within_tunnel = True
-        for j in range(num_sample_points):
-            min_distance = np.min(euclidean_distances(gesture_points[j], template_points)[0])
-            if max(min_distance - radius, 0) != 0:
-                is_gesture_within_tunnel = False
-                break
-            # min_distance = np.min(euclidean_distances(template_points[j], gesture_points)[0])
-            # template_gesture_tunnel_distance += max(min_distance - radius, 0)
-        if not is_gesture_within_tunnel:
-            deltas = None
+        template_points = [[valid_template_sample_points_X[i][j], valid_template_sample_points_Y[i][j]] for j in range(num_sample_points)]
+        distances = euclidean_distances(gesture_points, template_points)
+        template_gesture_min_distances = np.min(distances, axis=0)
+        gesture_template_min_distances = np.min(distances, axis=1)
+        if np.any(gesture_template_min_distances > radius) or np.any(template_gesture_min_distances > radius):
+            deltas = np.diagonal(distances)
             location_scores[i] = np.sum(np.multiply(alphas, deltas))
 
     return location_scores
@@ -234,9 +235,8 @@ def get_integration_scores(shape_scores, location_scores):
     # TODO: Set your own shape weight
     shape_coef = 0.5
     # TODO: Set your own location weight
-    location_coef = 0.5
-    for i in range(len(shape_scores)):
-        integration_scores.append(shape_coef * shape_scores[i] + location_coef * location_scores[i])
+    location_coef = 1 - shape_coef
+    integration_scores = shape_coef * shape_scores + location_coef * location_scores
     return integration_scores
 
 
@@ -298,31 +298,34 @@ def shark2():
 
 
 if __name__ == "__main__":
-    # app.run()
-    gesture_points_X = [169, 169, 170, 171, 173, 176, 180, 185, 187, 190, 192, 193, 194, 197, 201, 204, 206, 208, 210, 211, 213,
-                216, 217, 218, 219, 220, 219, 219, 218, 215, 213, 211, 205, 201, 196, 194, 191, 189, 188, 185, 181, 180,
-                177, 176, 175, 173, 171, 170, 166, 164, 161, 158, 154, 150, 143, 138, 137, 136, 134, 133, 131, 126, 124,
-                119, 117, 115, 113, 111, 110, 109, 106, 106]
-    gesture_points_Y = [47.1875, 46.1875, 46.1875, 46.1875, 49.1875, 51.1875, 53.1875, 57.1875, 60.1875, 62.1875, 64.1875,
-                65.1875, 66.1875, 69.1875, 72.1875, 75.1875, 77.1875, 79.1875, 81.1875, 82.1875, 82.1875, 85.1875,
-                86.1875, 87.1875, 87.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 86.1875,
-                85.1875, 83.1875, 82.1875, 81.1875, 81.1875, 81.1875, 80.1875, 78.1875, 78.1875, 77.1875, 77.1875,
-                76.1875, 76.1875, 75.1875, 75.1875, 73.1875, 72.1875, 71.1875, 70.1875, 69.1875, 67.1875, 65.1875,
-                63.1875, 63.1875, 63.1875, 63.1875, 62.1875, 62.1875, 61.1875, 61.1875, 59.1875, 57.1875, 57.1875,
-                56.1875, 56.1875, 55.1875, 55.1875, 55.1875, 55.1875]
+    if True:
+        app.run()
+    else:
+        start_time = time.time()
+        gesture_points_X = [169, 169, 170, 171, 173, 176, 180, 185, 187, 190, 192, 193, 194, 197, 201, 204, 206, 208, 210, 211, 213,
+                    216, 217, 218, 219, 220, 219, 219, 218, 215, 213, 211, 205, 201, 196, 194, 191, 189, 188, 185, 181, 180,
+                    177, 176, 175, 173, 171, 170, 166, 164, 161, 158, 154, 150, 143, 138, 137, 136, 134, 133, 131, 126, 124,
+                    119, 117, 115, 113, 111, 110, 109, 106, 106]
+        gesture_points_Y = [47.1875, 46.1875, 46.1875, 46.1875, 49.1875, 51.1875, 53.1875, 57.1875, 60.1875, 62.1875, 64.1875,
+                    65.1875, 66.1875, 69.1875, 72.1875, 75.1875, 77.1875, 79.1875, 81.1875, 82.1875, 82.1875, 85.1875,
+                    86.1875, 87.1875, 87.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 88.1875, 86.1875,
+                    85.1875, 83.1875, 82.1875, 81.1875, 81.1875, 81.1875, 80.1875, 78.1875, 78.1875, 77.1875, 77.1875,
+                    76.1875, 76.1875, 75.1875, 75.1875, 73.1875, 72.1875, 71.1875, 70.1875, 69.1875, 67.1875, 65.1875,
+                    63.1875, 63.1875, 63.1875, 63.1875, 62.1875, 62.1875, 61.1875, 61.1875, 59.1875, 57.1875, 57.1875,
+                    56.1875, 56.1875, 55.1875, 55.1875, 55.1875, 55.1875]
 
-    gesture_sample_points_X, gesture_sample_points_Y = generate_sample_points(gesture_points_X, gesture_points_Y)
+        gesture_sample_points_X, gesture_sample_points_Y = generate_sample_points(gesture_points_X, gesture_points_Y)
 
-    valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, template_sample_points_Y)
+        valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, template_sample_points_Y)
 
-    shape_scores = get_shape_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+        shape_scores = get_shape_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
 
-    location_scores = get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+        location_scores = get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
 
-    integration_scores = get_integration_scores(shape_scores, location_scores)
+        integration_scores = get_integration_scores(shape_scores, location_scores)
 
-    best_word = get_best_word(valid_words, integration_scores)
+        best_word = get_best_word(valid_words, integration_scores)
 
-    end_time = time.time()
+        end_time = time.time()
 
-    print('{"best_word":"' + best_word + '", "elapsed_time":"' + str(round((end_time - start_time) * 1000, 5)) + 'ms"}')
+        print('{"best_word":"' + best_word + '", "elapsed_time":"' + str(round((end_time - start_time) * 1000, 5)) + 'ms"}')

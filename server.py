@@ -122,24 +122,12 @@ def do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, tem
     '''
     valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = [], [], []
     # TODO: Set your own pruning threshold
-    threshold = 35
+    threshold = 30
     # TODO: Do pruning (12 points)
 
     # Create numpy array for gesture start and end point [[x, y]]
     gesture_start_point = np.array([gesture_points_X[0], gesture_points_Y[0]])
     gesture_end_point = np.array([gesture_points_X[-1], gesture_points_Y[-1]])
-
-    # for i in range(len(template_sample_points_X)):
-    #     template_start_point = np.array([template_sample_points_X[i][0], template_sample_points_Y[i][0]])
-    #     start_distance = np.linalg.norm(template_start_point - gesture_start_point)
-    #
-    #     template_end_point = np.array([template_sample_points_X[i][-1], template_sample_points_Y[i][-1]])
-    #     end_distance = np.linalg.norm(template_end_point - gesture_end_point)
-    #
-    #     if start_distance + end_distance < threshold:
-    #         valid_template_sample_points_X.append(template_sample_points_X[i])
-    #         valid_template_sample_points_Y.append(template_sample_points_Y[i])
-    #         valid_words.append(words[i])
 
     # Number of templates
     num_templates = len(template_sample_points_X)
@@ -215,16 +203,26 @@ def get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_
     radius = 15
     # TODO: Calculate location scores (12 points)
 
+    # Initialize location scores
     location_scores = np.zeros((len(valid_template_sample_points_X)))
+    # Create a list of gesture points [[xi, yi]]
     gesture_points = [[gesture_sample_points_X[j], gesture_sample_points_Y[j]] for j in range(num_sample_points)]
 
+    # For each template
     for i in range(len(valid_template_sample_points_X)):
+        # Create a list of template points
         template_points = [[valid_template_sample_points_X[i][j], valid_template_sample_points_Y[i][j]] for j in range(num_sample_points)]
+        # Calculate distance of each gesture point with each template point
         distances = euclidean_distances(gesture_points, template_points)
+        # Find the distance of the closest gesture point to each template point
         template_gesture_min_distances = np.min(distances, axis=0)
+        # Find the distance of the closest template point to each gesture point
         gesture_template_min_distances = np.min(distances, axis=1)
+        # If any gesture point is not within the radius tunnel or any template point is not within the radius tunnel
         if np.any(gesture_template_min_distances > radius) or np.any(template_gesture_min_distances > radius):
+            # Calculate delta as the distance of each gesture point with corresponding template point
             deltas = np.diagonal(distances)
+            # Calculate location score as sum of product of alpha and delta for each point
             location_scores[i] = np.sum(np.multiply(alphas, deltas))
 
     return location_scores

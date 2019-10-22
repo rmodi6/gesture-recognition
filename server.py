@@ -313,7 +313,7 @@ def get_best_word(valid_words, integration_scores):
     return ' '.join(best_words)
 
 
-@app.route("/")
+@app.route("/gesture-recognition")
 def init():
     return render_template('index.html')
 

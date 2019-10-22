@@ -98,17 +98,21 @@ for i in range(10000):
 
 # Normalize every template
 L = 200
+# Calculate scaling factor s
 templates_width = np.max(template_sample_points_X, axis=1) - np.min(template_sample_points_X, axis=1)
 templates_height = np.max(template_sample_points_Y, axis=1) - np.min(template_sample_points_Y, axis=1)
 s = L / np.maximum(1, np.max(np.array([templates_width, templates_height]), axis=0))
 
+# Scale the points
 scaling_matrix = np.diag(s)
 scaled_template_points_X = np.matmul(scaling_matrix, template_sample_points_X)
 scaled_template_points_Y = np.matmul(scaling_matrix, template_sample_points_Y)
 
+# Calculate translation factor tx and ty
 scaled_template_centroid_X, scaled_template_centroid_Y = np.mean(scaled_template_points_X, axis=1), np.mean(scaled_template_points_Y, axis=1)
-
 tx, ty = 0 - scaled_template_centroid_X, 0 - scaled_template_centroid_Y
+
+# Translate the points
 translation_matrix_X = np.reshape(tx, (-1, 1))
 translation_matrix_Y = np.reshape(ty, (-1, 1))
 normalized_template_sample_points_X = translation_matrix_X + scaled_template_points_X
@@ -189,19 +193,23 @@ def get_shape_scores(valid_indices, gesture_sample_points_X, gesture_sample_poin
     shape_scores = []
     # TODO: Set your own L
     L = 200
+    # Calculate scaling factor s
     gesture_width = np.max(gesture_sample_points_X) - np.min(gesture_sample_points_X)
     gesture_height = np.max(gesture_sample_points_Y) - np.min(gesture_sample_points_Y)
     s = L / max(gesture_width, gesture_height, 1)
 
+    # Scale the points
     scaling_matrix = np.array([[s, 0],
                                [0, s]])
     old_gesture_points = np.array([gesture_sample_points_X,
                                    gesture_sample_points_Y])
     scaled_gesture_points = np.matmul(scaling_matrix, old_gesture_points)
 
+    # Calculate translation factor tx and ty
     scaled_gesture_centroid_X, scaled_gesture_centroid_Y = np.mean(scaled_gesture_points[0]), np.mean(scaled_gesture_points[1])
-
     tx, ty = 0 - scaled_gesture_centroid_X, 0 - scaled_gesture_centroid_Y
+
+    # Translate the points
     translation_matrix = np.array([[tx],
                                    [ty]])
     normalized_gesture_sample_points = translation_matrix + scaled_gesture_points
@@ -211,9 +219,13 @@ def get_shape_scores(valid_indices, gesture_sample_points_X, gesture_sample_poin
     valid_normalized_template_sample_points_X = normalized_template_sample_points_X[valid_indices]
     valid_normalized_template_sample_points_Y = normalized_template_sample_points_Y[valid_indices]
 
+    # Calculate (xi - xj)^2
     x_ = (valid_normalized_template_sample_points_X - np.reshape(normalized_gesture_sample_points[0], (1, -1))) ** 2
+    # Calculate (yi - yj)^2
     y_ = (valid_normalized_template_sample_points_Y - np.reshape(normalized_gesture_sample_points[1], (1, -1))) ** 2
+    # Calculate square root of (xi - xj)^2 + (yi - yj)^2
     distances = (x_ + y_) ** 0.5
+    # Calculate shape scores as mean of distances
     shape_scores = np.sum(distances, axis=1) / num_sample_points
 
     return shape_scores
@@ -291,9 +303,13 @@ def get_best_word(valid_words, integration_scores):
     # TODO: Set your own range.
     n = 3
     # TODO: Get the best word (12 points)
+
+    # Find indices having the minimum score
     min_score = np.min(np.array(integration_scores))
     min_score_indices = np.where(integration_scores == min_score)[0]
+    # Create a list of words having minimum scores
     best_words = [valid_words[min_score_index] for min_score_index in min_score_indices]
+    # Return the best words separated by space
     return ' '.join(best_words)
 
 
@@ -320,15 +336,17 @@ def shark2():
 
     valid_indices, valid_words, valid_template_sample_points_X, valid_template_sample_points_Y = do_pruning(gesture_points_X, gesture_points_Y, template_sample_points_X, template_sample_points_Y)
 
-    shape_scores = get_shape_scores(valid_indices, gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+    best_word = "Word not found"
+    if len(valid_words) != 0:
+        shape_scores = get_shape_scores(valid_indices, gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
 
-    location_scores = get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
+        location_scores = get_location_scores(gesture_sample_points_X, gesture_sample_points_Y, valid_template_sample_points_X, valid_template_sample_points_Y)
 
-    integration_scores = get_integration_scores(shape_scores, location_scores)
+        integration_scores = get_integration_scores(shape_scores, location_scores)
 
-    best_word = get_best_word(valid_words, integration_scores)
+        best_word = get_best_word(valid_words, integration_scores)
 
-    end_time = time.time()
+        end_time = time.time()
 
     return '{"best_word":"' + best_word + '", "elapsed_time":"' + str(round((end_time - start_time) * 1000, 5)) + 'ms"}'
 

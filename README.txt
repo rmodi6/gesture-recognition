@@ -6,7 +6,8 @@ in gestures at the beginning or end improving accuracy for mistyped gestures.
 
 Code Modifications:
 ==================
-- I have commented out lines which causes errors in sampling points for gestures.
+- I have commented out lines 332 and 333 which cause errors in sampling points for gestures.
+- Added a check to see if there are no valid words remaining after pruning, then return "Word not found"
 - I have pre-calculated the normalized template sample points for improving running time.
 - I have also pre-calculated alphas used in location scores for improving running time.
 

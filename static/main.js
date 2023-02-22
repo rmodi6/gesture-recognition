@@ -10,6 +10,13 @@ var SHARK2 = SHARK2 || {};
 $(document).ready(function () {
     SHARK2.sandboxTest();
 
+    // Detect if request is from mobile user agent
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    // If so, update div with id #mobileUA
+    if (isMobile) {
+        $('#mobileUA').html('It appears that you are using a touchscreen enabled mobile device. This website does not work correctly on touchscreen inputs.');
+    }
+
     $('#cvsMain')[0].width = 432;
     $('#cvsMain')[0].height = 137;
 
@@ -78,17 +85,17 @@ SHARK2.canvasMouseUp = function (e) {
     console.log(SHARK2.coords);
 
     $.ajax({
-	  type: 'POST',
-	  url: '/shark2',
-      data: JSON.stringify(SHARK2.coords),
-      dataType: "json",
-	  success: function(result) {
-	    console.log(result);
-	    $('#divInfo').html(result['best_word'] + ' ' + result['elapsed_time'])
-	  },
-	  error: function(result) {
-	  }
-	});
+        type: 'POST',
+        url: '/shark2',
+        data: JSON.stringify(SHARK2.coords),
+        dataType: "json",
+        success: function (result) {
+            console.log(result);
+            $('#divInfo').html(result['best_word'] + ' ' + result['elapsed_time'])
+        },
+        error: function (result) {
+        }
+    });
 
     SHARK2.isDragging = false;
     SHARK2.context.closePath();
